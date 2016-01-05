@@ -1,0 +1,4 @@
+name = demo_services
+description = "Demo Services."
+package = Demo Services Package
+core = 7.x

@@ -1,0 +1,123 @@
+<?php
+
+/**
+ * Implements hook_services_resources.
+ */
+function demo_services_services_resources() {
+  $resources = array();
+
+  $resources['news'] = array(
+    'operations' => array(
+      'create' => array(
+        'help' => 'Create a Single News',
+        'callback' => '_demo_services_news_create',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array(
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'optional' => FALSE,
+            'source' => 'data',
+          ),
+        )
+      ),
+      'update' => array(
+        'help' => 'Update a News',
+        'callback' => '_demo_services_news_update',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'optional' => FALSE,
+            'source' => 'data',
+          )
+        )
+      ),
+      'delete' => array(
+        'help' => 'Delete a Single News',
+        'callback' => '_demo_services_news_delete',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+          ),
+        )
+      ),
+      'retrieve' => array(
+        'help' => 'Get a Single News',
+        'callback' => '_demo_services_news_retrieve',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+          )
+        )
+      ),
+      'index' => array(
+        'help' => 'Get all News',
+        'callback' => '_demo_services_news_index',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array(
+          array(
+            'name' => 'page',
+            'type' => 'int',
+            'optional' => TRUE,
+            'source' => array('param' => 'page'),
+            'default value' => 0,
+          ),
+          array(
+            'name' => 'limit',
+            'type' => 'int',
+            'optional' => TRUE,
+            'source' => array('param' => 'limit'),
+            'default value' => 20,
+          )
+        )
+      ),
+    ),
+    'actions' => array(),
+    'relationships' => array(),
+    'targeted_actions' => array(),
+  );
+
+  return $resources;
+}
+
+function _demo_services_access_callback() {
+  return TRUE;
+}
+
+function _demo_services_news_retrieve($nid) {
+  return services_error('Not Implemented', 501, array($nid));
+}
+
+function _demo_services_news_delete($nid) {
+  return services_error('Not Implemented', 501, array($nid));
+}
+
+function _demo_services_news_update($nid, $data) {
+  return services_error('Not Implemented', 501, array(
+    $nid, $data
+  ));
+}
+
+function _demo_services_news_create($data) {
+  return services_error('Not Implemented', 501, array($data));
+}
+
+function _demo_services_news_index($page, $limit) {
+  return services_error('Not Implemented', 501, array($page, $limit));
+}

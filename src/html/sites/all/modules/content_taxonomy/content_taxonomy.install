@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * @file
+ * (Un-) installation tasks for content taxonomy.
+ */
+
+/**
+ * Implements hook_disable().
+ *
+ * Allow uninstall of content taxonomy by removing the callback in field
+ * configuration. Re-enabling requires to save the field configs to re-insert
+ * the callback.
+ */
+function content_taxonomy_disable() {
+  $fields = field_read_fields();
+  foreach ($fields as $field) {
+    if (isset($field['settings']['options_list_callback']) && $field['settings']['options_list_callback'] == 'content_taxonomy_allowed_values') {
+      // We cannot unset this value, because field_update_field() merges in
+      // prior settings before saving. Setting it to NULL works.
+      $field['settings']['options_list_callback'] = NULL;
+    }
+    field_update_field($field);
+  }
+}

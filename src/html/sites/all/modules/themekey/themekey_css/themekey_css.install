@@ -1,0 +1,80 @@
+<?php
+
+/**
+ * @file
+ * Database schema of
+ * @see themekey_css.module
+ *
+ * @author Markus Kalkbrenner | bio.logis GmbH
+ *   @see http://drupal.org/user/124705
+ */
+
+
+/**
+ * Implements hook_schema().
+ */
+function themekey_css_schema() {
+  module_load_include('install', 'themekey');
+  $themekey_schema = themekey_schema();
+
+  $schema = array();
+  $schema['themekey_css_rules'] = $themekey_schema['themekey_properties'];
+
+  // Extend schema. Add css_group and css_weight columns.
+  $schema['themekey_css_rules']['fields']['css_group'] = array(
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => 'CSS_DEFAULT',
+  );
+
+  $schema['themekey_css_rules']['fields']['css_weight'] = array(
+    'type' => 'int',
+    'unsigned' => FALSE,
+    'not null' => TRUE,
+    'default' => 0,
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_disable().
+ */
+function themekey_css_disable() {
+  // We should delete 'themekey_css_debug_css_files' when module is disabled
+  // because if 'themekey_css_debug_css_files' == TRUE but module was disabled
+  // there will be css debug message on a page.
+  variable_del('themekey_css_debug_css_files');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function themekey_css_uninstall() {
+  variable_del('themekey_css_files');
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Update themekey_css_rules table: add css_group and css_weight columns.
+ */
+function themekey_css_update_7100() {
+  $css_group = array(
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => 'CSS_DEFAULT',
+  );
+
+  $css_weight = array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+    'default' => 0,
+  );
+
+  db_add_field('themekey_css_rules', 'css_group', $css_group);
+  db_add_field('themekey_css_rules', 'css_weight', $css_weight);
+}
