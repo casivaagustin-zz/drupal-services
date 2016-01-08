@@ -88,7 +88,14 @@ function demo_services_services_resources() {
         )
       ),
     ),
-    'actions' => array(),
+    'actions' => array(
+      'most-relevant' => array(
+        'help' => 'Get Most Relevant News',
+        'callback' => '_demo_services_actions_most_relevant',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array()
+      )
+    ),
     'relationships' => array(),
     'targeted_actions' => array(),
   );
@@ -100,24 +107,212 @@ function _demo_services_access_callback() {
   return TRUE;
 }
 
+/**
+ * Callback to retrieve a news.
+ *
+ * @param $nid
+ * @return bool|mixed
+ */
 function _demo_services_news_retrieve($nid) {
-  return services_error('Not Implemented', 501, array($nid));
+  $node = node_load($nid);
+  if ($node && $node->type == 'news') {
+    return $node;
+  }
+  return services_error('Not Found', 404, array($nid));
 }
 
+/**
+ * Callback to delete a news
+ *
+ * @param $nid
+ * @return bool|mixed
+ */
 function _demo_services_news_delete($nid) {
-  return services_error('Not Implemented', 501, array($nid));
+  $node = node_load($nid);
+  if ($node && $node->type == 'news') {
+    node_delete($nid);
+    return TRUE;
+  }
+  return services_error('Not Found', 404, array($nid));
 }
 
-function _demo_services_news_update($nid, $data) {
-  return services_error('Not Implemented', 501, array(
-    $nid, $data
-  ));
-}
-
+/**
+ * Callback to create a news
+ *
+ * @param $data
+ * @return stdClass
+ */
 function _demo_services_news_create($data) {
-  return services_error('Not Implemented', 501, array($data));
+  $node = new stdClass();
+  _demo_services_handle_node($node, $data);
+  return $node;
 }
 
+/**
+ * Callback to update a news
+ *
+ * @param $nid
+ * @param $data
+ * @return bool|mixed
+ */
+function _demo_services_news_update($nid, $data) {
+  $node = node_load($nid);
+  if ($node && $node->type == 'news') {
+    _demo_services_handle_node($node, $data);
+  }
+  return $node;
+}
+
+/**
+ * Does a query search into the nodes
+ *
+ * @param $page
+ * @param $limit
+ *
+ * @return array
+ */
 function _demo_services_news_index($page, $limit) {
-  return services_error('Not Implemented', 501, array($page, $limit));
+
+  $query = new EntityFieldQuery();
+
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'news')
+    ->propertyCondition('status', NODE_PUBLISHED)
+    ->range($page * $limit, $limit)
+    ->propertyOrderBy('created', 'DESC');
+
+  $result = $query->execute();
+
+  if (isset($result['node'])) {
+    $news_nids = array_keys($result['node']);
+    $nodes = node_load_multiple($news_nids);
+    $nodes = _demo_services_reindex_for_js($nodes);
+    return $nodes;
+  }
+
+  return array();
+}
+
+/**
+ * With an array of terms values return an array of taxonomy terms.
+ *
+ * If the string term is not in the vocabulary it will create one.
+ *
+ * @param Array $tags
+ *
+ * @return array
+ */
+function _demo_services_process_tags($tags) {
+  $tag_vocabulary = NULL;
+
+  $terms = array();
+
+  foreach ($tags as $tag) {
+    $taxonomy = taxonomy_get_term_by_name($tag, 'tags');
+
+    if (!$taxonomy) { //Taxonomy does not exists, we have to create one
+
+      if ($tag_vocabulary === NULL) {
+        $tag_vocabulary = taxonomy_vocabulary_machine_name_load('tags');
+      }
+      $taxonomy = new stdClass();
+      $taxonomy->name = $tag;
+      $taxonomy->vid = $tag_vocabulary->vid;
+
+      taxonomy_term_save($taxonomy);
+
+      $taxonomy = taxonomy_get_term_by_name($tag, 'tags');
+    }
+    $taxonomy = array_pop($taxonomy);
+    $terms[] = $taxonomy;
+  }
+
+  return $terms;
+}
+
+/**
+ * Does the node preparation to save it.
+ *
+ * @param $node
+ *
+ * @param $data
+ *
+ * @return mixed
+ */
+function _demo_services_handle_node(&$node, $data) {
+  global $user;
+  $node->title = $data['title'];
+  $node->type = 'news';
+
+  node_object_prepare($node);
+
+  $node->language = LANGUAGE_NONE; // Or e.g. 'en' if locale is enabled
+  $node->uid = $user->uid;
+
+  $node->body[$node->language][0]['value'] = $data['body'];
+  $node->body[$node->language][0]['summary'] = '';
+  $node->body[$node->language][0]['format'] = 'full_html';
+
+  $section = taxonomy_get_term_by_name($data['section'], 'section');
+
+  if (!$section) {
+    return services_error('Not a valid Section', 500, array(
+      $data['section']
+    ));
+  }
+
+  $section = array_pop($section);
+
+  $node->field_section[$node->language][0]['tid'] = $section->tid;
+
+  $tags = _demo_services_process_tags($data['tags']);
+
+  $node->field_tags[$node->language] = array();
+
+  foreach ($tags as $tag) {
+    $node->field_tags[$node->language][]['tid'] = $tag->tid;
+  }
+
+  //@todo save the image.
+
+  $node = node_submit($node);
+  node_save($node);
+}
+
+function _demo_services_actions_most_relevant() {
+  $select = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->condition('n.promote', 1)
+    ->condition('n.status', 1)
+    ->condition('n.type', 'news')
+    ->orderBy('n.sticky', 'DESC')
+    ->orderBy('n.created', 'DESC')
+    ->range(0, 5);
+
+  $nids = $select->execute()->fetchAllKeyed(0, 0 );
+
+  $nodes = node_load_multiple($nids);
+
+  $nodes = _demo_services_reindex_for_js($nodes);
+
+  return $nodes;
+}
+
+/**
+ * Entity Load Multiple always put the id as index in the array. that is a problem
+ * in js if you want to maintain the order.
+ *
+ * If you are going to return an array from entity load multiple use this function to remove
+ * the string based id index in the array and maintain the order in Js.
+ *
+ * @param $nodes
+ * @return array
+ */
+function _demo_services_reindex_for_js($nodes) {
+  $clean_nodes = array();
+  foreach ($nodes as $node) {
+    $clean_nodes[] = $node;
+  }
+
+  return $clean_nodes;
 }
