@@ -96,8 +96,36 @@ function demo_services_services_resources() {
         'args' => array()
       )
     ),
-    'relationships' => array(),
-    'targeted_actions' => array(),
+    'relationships' => array(
+      'comments' => array(
+        'help' => 'Get comments of a single news',
+        'callback' => '_demo_services_relationship_comments',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+          )
+        )
+      )
+    ),
+    'targeted_actions' => array(
+      'like' => array(
+        'help' => 'Set a Like for the News',
+        'callback' => '_demo_services_target_actions_link',
+        'access callback' => '_demo_services_access_callback',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+          )
+        )
+      )
+    ),
   );
 
   return $resources;
@@ -315,4 +343,56 @@ function _demo_services_reindex_for_js($nodes) {
   }
 
   return $clean_nodes;
+}
+
+/**
+ * Callback to count likes of a news.
+ *
+ * @param $nid
+ *
+ * @return mixed
+ */
+function _demo_services_target_actions_link($nid) {
+  //@todo implement a table to save the links per user.
+  return $nid;
+}
+
+function _demo_services_relationship_comments($nid, $page = 0, $limit = 100) {
+  if (module_exists('comment')) {
+    $node = node_load($nid);
+
+    if (empty($node) || $node->type != 'news') {
+      return services_error('Not Found', 404, array($nid));
+    }
+
+    $query = db_select('comment', 'c');
+    $query->innerJoin('node', 'n', 'n.nid = c.nid');
+    $query->addTag('node_access');
+    $query->fields('c', array('cid'))
+      ->condition('c.nid', $nid);
+
+    if ($limit) {
+      $query->range($page * $limit, $limit);
+    }
+
+    $result = $query->execute()
+      ->fetchAll();
+
+    foreach ($result as $record) {
+      $cids[] = $record->cid;
+    }
+
+    !empty($cids) ? $comments = comment_load_multiple($cids) : array();
+
+    $return_comments = array();
+
+    foreach ($comments as $comment) {
+      $return_comments[] = services_field_permissions_clean('view', 'comment', $comment);
+    }
+
+    return $return_comments;
+  }
+  else {
+    return services_error('Comments is not Enabled.', 500);
+  }
 }
