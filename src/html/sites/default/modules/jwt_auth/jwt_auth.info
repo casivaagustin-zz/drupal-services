@@ -1,0 +1,5 @@
+name = jwt_auth
+description = Based on the user name and password will return a valid JWT token.
+core = 7.x
+package = OAuth2
+dependencies[] = oauth2_server

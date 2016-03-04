@@ -1,0 +1,79 @@
+<?php
+
+/**
+ * @file : Implements an endpoint to return a JWT token that will work with oauth2 server module
+ * but using a username and password.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function jwt_auth_menu() {
+  $items = array();
+
+  $items['oauth2/auth'] = array(
+    'page callback' => 'jwt_auth_auth_page',
+    'access arguments' => array('use oauth2 server'),
+    'type' => MENU_CALLBACK,
+    'file' => 'jwt_auth_auth.pages.inc',
+  );
+
+  $items['oauth2/refresh'] = array(
+    'page callback' => 'jwt_auth_refresh_page',
+    'access arguments' => array('use oauth2 server'),
+    'type' => MENU_CALLBACK,
+    'file' => 'jwt_auth_auth.pages.inc',
+  );
+
+  $items['admin/config/oauth2jwt'] = array(
+    'title' => t('JWT Oauth2 Auth'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('jwt_auth_config_form'),
+    'access arguments' => array('administer oauth2 server'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Config Form for Variables.
+ *
+ * @return mixed
+ */
+function jwt_auth_config_form() {
+  $form = array();
+
+  $form['jwt_client_private_key'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('jwt_client_private_key', ''),
+    '#required' => TRUE,
+    '#title' => t('Private Key'),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Helper function to return a standardize response structure.
+ *
+ * @param $data (optional) mixed - The data to return.
+ * @param $error_message (optional) string  - The error messages.
+ *
+ * @return object $response - The response object.
+ */
+function jwt_auth_response($data = '', $error_message = NULL) {
+  $response = new stdClass();
+  $response->status = empty($error_message) ? 'success' : 'error';
+
+  if (isset($data)) {
+    $response->data = $data;
+  }
+
+  if (isset($error_message)) {
+    $response->message = $error_message;
+    return services_error('Error', 406, $response);
+  }
+
+  return $response;
+}

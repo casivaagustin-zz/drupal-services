@@ -1040,10 +1040,12 @@ function oauth2_server_check_access($server_name, $scope = NULL) {
   }
 
   // Make sure that the token we have matches our server.
-  if ($token['server'] != $server->name) {
-    $response->setError(401, 'invalid_grant', 'The access token provided is invalid');
-    $response->addHttpHeaders(array('WWW-Authenticate' => sprintf('%s, realm="%s", scope="%s"', 'bearer', 'Service', $scope)));
-    return $response;
+  if (!empty($token['server'])) {
+    if ($token['server'] != $server->name) {
+      $response->setError(401, 'invalid_grant', 'The access token provided is invalid');
+      $response->addHttpHeaders(array('WWW-Authenticate' => sprintf('%s, realm="%s", scope="%s"', 'bearer', 'Service', $scope)));
+      return $response;
+    }
   }
 
   // Check scope, if provided

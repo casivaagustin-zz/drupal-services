@@ -284,8 +284,8 @@ function oauth2_server_schema() {
       ),
       'token' => array(
         'description' => 'The token.',
-        'type' => 'varchar',
-        'length' => 255,
+        'type' => 'text',
+        'length' => 'normal',
         'not null' => TRUE,
       ),
       'expires' => array(
@@ -498,4 +498,22 @@ function oauth2_server_update_7107() {
     'default' => 0,
   );
   db_add_field('oauth2_server_token', 'created', $spec);
+}
+
+
+/**
+ * Fix for JWT tokens.
+ */
+function oauth2_server_update_7108() {
+  db_drop_index('oauth2_server_token', 'token');
+
+  $spec =  array(
+    'description' => 'The token.',
+    'type' => 'text',
+    'size' => 'normal',
+    'not null' => TRUE,
+  );
+
+  db_change_field('oauth2_server_token', 'token', 'token', $spec);
+  db_add_index('oauth2_server_token', 'token', array(array('0' => 'token', '1' => '255')));
 }

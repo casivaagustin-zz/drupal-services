@@ -219,7 +219,7 @@ class JwtBearer implements GrantTypeInterface, ClientAssertionTypeInterface
      */
     public function createAccessToken(AccessTokenInterface $accessToken, $client_id, $user_id, $scope)
     {
-        $includeRefreshToken = false;
+        $includeRefreshToken = true;
 
         return $accessToken->createAccessToken($client_id, $user_id, $scope, $includeRefreshToken);
     }
